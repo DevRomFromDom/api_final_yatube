@@ -13,12 +13,6 @@ class PostSerializer(serializers.ModelSerializer):
         fields = ('id', 'text', 'author', 'image', 'group', 'pub_date',)
         model = Post
 
-    def validate(self, data):
-        if 'text' not in data:
-            raise serializers.ValidationError(
-                'required field')
-        return data
-
 
 class CommentSerializer(serializers.ModelSerializer):
     author = SlugRelatedField(
@@ -29,6 +23,16 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('id', 'author', 'post', 'text', 'created',)
         model = Comment
+
+    def validate(self, data):
+        post_id = ((self.context.get('request').path).split(
+            '/api/v1/posts/')[1].split('/comments')[0])
+
+        if not Post.objects.filter(pk=post_id):
+            raise serializers.ValidationError(
+                'Поста для которого вы пытаетесь'
+                'сделать комментарий, несуществует!')
+        return data
 
 
 class GroupSerializer(serializers.ModelSerializer):

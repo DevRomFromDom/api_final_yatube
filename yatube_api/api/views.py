@@ -3,14 +3,15 @@ from django.shortcuts import get_object_or_404
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from rest_framework.permissions import (IsAuthenticated,
                                         IsAuthenticatedOrReadOnly)
-from rest_framework import mixins, viewsets, filters
+from rest_framework import filters
 
-from posts.models import Post, Group, Follow
+from posts.models import Post, Group
 from .serializers import (FollowSerializer,
                           GroupSerializer,
                           PostSerializer,
                           CommentSerializer)
 from .permissions import IsAutherOrReadOnly
+from .mixins import ListCreateViewSet
 
 
 class PostViewSet(ModelViewSet):
@@ -33,21 +34,14 @@ class CommentViewSet(ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly,
                           IsAutherOrReadOnly]
 
+    def get_post(self):
+        return get_object_or_404(Post, pk=self.kwargs.get('post_id'))
+
     def get_queryset(self):
-        post = get_object_or_404(Post, pk=self.kwargs.get('post_id'))
-        new_queryset = post.comments.all()
-        return new_queryset
+        return self.get_post().comments.all()
 
     def perform_create(self, serializer):
-        post = get_object_or_404(Post, pk=self.kwargs.get('post_id'))
-        serializer.save(author=self.request.user, post=post)
-
-
-class ListCreateViewSet(
-        mixins.CreateModelMixin,
-        mixins.ListModelMixin,
-        viewsets.GenericViewSet):
-    pass
+        serializer.save(author=self.request.user, post=self.get_post())
 
 
 class FollowViewSet(ListCreateViewSet):
@@ -57,9 +51,7 @@ class FollowViewSet(ListCreateViewSet):
     search_fields = ('following__username',)
 
     def get_queryset(self):
-        user = self.request.user
-        follows = Follow.objects.filter(user=user)
-        return follows
+        return self.request.user.follower.all()
 
     def perform_create(self, serializer):
         user = self.request.user
