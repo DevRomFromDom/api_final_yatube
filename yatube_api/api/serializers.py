@@ -25,12 +25,11 @@ class CommentSerializer(serializers.ModelSerializer):
         model = Comment
 
     def validate(self, data):
-        post_id = ((self.context.get('request').path).split(
-            '/api/v1/posts/')[1].split('/comments')[0])
+        post_id = self.context['request'].parser_context['kwargs']['post_id']
 
-        if not Post.objects.filter(pk=post_id):
+        if not Post.objects.filter(pk=post_id).exists():
             raise serializers.ValidationError(
-                'Поста для которого вы пытаетесь'
+                'Поста, для которого вы пытаетесь '
                 'сделать комментарий, несуществует!')
         return data
 
